@@ -1,0 +1,5 @@
+sim
+*.vvp
+*.vcd
+__pycache__/
+.DS_Store
