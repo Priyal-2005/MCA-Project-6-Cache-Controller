@@ -29,15 +29,31 @@ Course: Modern Computer Architecture, Newton School of Technology
 The controller FSM is `IDLE -> LOOKUP -> (REFILL | WRITEMEM) -> DONE`.
 Cache size and block size are set by the `INDEX_BITS` and `WORD_BITS` parameters in `rtl/dm_cache.v`.
 
-## Repository layout
+## Repository Structure
 
 ```
-rtl/        dm_cache.v (datapath + FSM), main_mem.v (memory model)
-tb/         tb_dm_cache.v (self-checking testbench), tb_trace.v (trace-driven)
-traces/     sequential, random, repeated, stride16, stride1024, matrix_rowmajor, matrix_colmajor
-scripts/    trace_gen.py (trace generator)
-docs/       diagrams, waveforms, synthesis reports, results
-report/     IEEE report (PDF and source)
+MCA-Project-6-Cache-Controller/
+  README.md                 project idea, team, how to run, video link, report link
+  .gitignore
+  rtl/
+    dm_cache.v              cache datapath + FSM
+    main_mem.v              main-memory model + handshake
+  tb/
+    tb_dm_cache.v           self-checking directed testbench
+    tb_trace.v              trace-driven testbench
+  traces/
+    sequential.trace  random.trace  repeated.trace  stride16.trace
+    stride1024.trace  matrix_rowmajor.trace  matrix_colmajor.trace
+  scripts/
+    trace_gen.py            trace generator
+  docs/
+    diagrams/               block diagram, FSM diagram, topology
+    waveforms/              annotated hit / miss / conflict screenshots
+    synthesis/              Vivado or Yosys reports and screenshots
+    results/                results tables, sweep CSV, plots
+  report/
+    MCA_Project6_Report.pdf IEEE report (Phase I now, final in Phase II)
+    source/                 Word or LaTeX source
 ```
 
 ## How to run
