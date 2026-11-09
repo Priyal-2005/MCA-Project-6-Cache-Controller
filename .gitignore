@@ -1,4 +1,5 @@
 sim
+sim_trace
 *.vvp
 *.vcd
 __pycache__/
