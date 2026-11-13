@@ -27,6 +27,7 @@ Course: Modern Computer Architecture, Newton School of Technology
 | Memory latency | 4 cycles per word (parameter `LAT`) |
 
 The controller FSM is `IDLE -> LOOKUP -> (REFILL | WRITEMEM) -> DONE`. A `busy` output is high while a request is being processed.
+The controller keeps `hits` and `misses` counters, and `mem_reads` and `mem_writes` counters that count the words read from and written to main memory (used to compare the memory traffic of the two write policies).
 Cache size and block size are set by the `INDEX_BITS` and `WORD_BITS` parameters in `rtl/dm_cache.v`.
 
 ## Repository Structure
