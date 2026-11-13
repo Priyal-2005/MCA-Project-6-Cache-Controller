@@ -110,6 +110,11 @@ module tb_dm_cache;
         for (i = 0; i < 4096; i = i + 1)
             ref_mem[i] = i*3+1;
 
+        // Start the tag RAM at 0 so a missing valid check cannot hide behind 'x' values
+        
+        for (i = 0; i < 64; i = i + 1)
+            dut.tag_ram[i] = 0;
+
         req = 0;
         we = 0;
         addr = 0;
