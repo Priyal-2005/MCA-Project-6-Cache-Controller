@@ -130,5 +130,104 @@ plt.legend(fontsize=7)
 save_plot("latency_sweep.png")
 
 
+# 5. Additional charts requested by Priyal
+
+DOCS = ROOT / "docs"
+
+
+def save_docs_plot(filename):
+    plt.savefig(DOCS / filename, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"Created: docs/{filename}")
+
+
+# 5A and 5B. Separate cache sweep charts
+
+def make_trace_sweep_chart(trace_name, output_filename, takeaway):
+    fig, ax = plt.subplots(figsize=(9, 5.5))
+
+    for block in (8, 16, 32):
+        subset = sorted(
+            [
+                r for r in sweep
+                if r["trace"] == trace_name
+                and int(r["block_bytes"]) == block
+            ],
+            key=lambda r: int(r["cache_bytes"])
+        )
+
+        ax.plot(
+            [int(r["cache_bytes"]) for r in subset],
+            [float(r["hit_rate_pct"]) for r in subset],
+            marker="o",
+            linewidth=2,
+            label=f"{block} B block"
+        )
+
+    ax.set_xlabel("Cache Size")
+    ax.set_ylabel("Hit Rate (%)")
+    ax.set_title(f"Hit Rate vs Cache Size — {trace_name}")
+    ax.set_xticks([256, 512, 1024, 2048])
+    ax.set_xticklabels(["256 B", "512 B", "1 KB", "2 KB"])
+    ax.set_ylim(0, 100)
+    ax.grid(True, linestyle="--", alpha=0.5)
+    ax.legend()
+
+    fig.subplots_adjust(bottom=0.23)
+    fig.text(0.5, 0.06, takeaway, ha="center", fontsize=9, wrap=True)
+
+    save_docs_plot(output_filename)
+
+
+make_trace_sweep_chart(
+    "random",
+    "random_cache_sweep.png",
+    "Random access hit rates vary with cache capacity and block size."
+)
+
+make_trace_sweep_chart(
+    "matrix_colmajor",
+    "matrix_colmajor_cache_sweep.png",
+    "The chart compares column-major access hit rates across the tested cache configurations."
+)
+
+
+# 5C. Hit rate comparison for all 8 traces
+
+fig, ax = plt.subplots(figsize=(11, 5.5))
+
+traces = [r["trace"] for r in data]
+hit_rates = [float(r["hit_rate_pct"]) for r in data]
+
+bars = ax.bar(traces, hit_rates)
+
+ax.set_xlabel("Memory Access Trace")
+ax.set_ylabel("Hit Rate (%)")
+ax.set_title("Hit Rate Across All 8 Traces (1 KB Cache / 16 B Block)")
+ax.set_ylim(0, 110)
+ax.tick_params(axis="x", rotation=35)
+ax.grid(axis="y", linestyle="--", alpha=0.5)
+
+for bar, rate in zip(bars, hit_rates):
+    ax.text(
+        bar.get_x() + bar.get_width() / 2,
+        bar.get_height() + 1,
+        f"{rate:.1f}%",
+        ha="center",
+        fontsize=8
+    )
+
+fig.subplots_adjust(bottom=0.32)
+fig.text(
+    0.5, 0.025,
+    "The chart highlights how different memory access patterns affect cache hit rate.",
+    ha="center",
+    fontsize=9,
+    wrap=True
+)
+
+save_docs_plot("trace_hit_rates.png")
+
+
 print("\nAll plots generated successfully!")
 print(f"Output folder: {OUT}")
