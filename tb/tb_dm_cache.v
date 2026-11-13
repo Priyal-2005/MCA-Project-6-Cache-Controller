@@ -13,6 +13,7 @@ module tb_dm_cache;
 
     wire [31:0] rdata;
     wire done;
+    wire busy;
 
     wire mem_req, mem_we, mem_ack;
     wire [31:0] mem_addr, mem_wdata, mem_rdata;
@@ -20,6 +21,7 @@ module tb_dm_cache;
     wire [31:0] hits, misses;
 
     dm_cache dut(
+        .busy(busy),
         .clk(clk), .rst(rst),
         .req(req), .we(we),
         .addr(addr), .wdata(wdata),
@@ -62,7 +64,23 @@ module tb_dm_cache;
             @(negedge clk);
             req = 0;
 
+            // Controller should be busy while processing the request.
+            if (busy !== 1'b1) begin
+                errors = errors + 1;
+                $display("ERROR: busy should be HIGH during request");
+            end
+
             wait (done);
+
+            // Allow non-blocking assignments and combinational logic to settle.
+            #1;
+
+            // Controller should return to idle when done is asserted.
+            if (busy !== 1'b0) begin
+                errors = errors + 1;
+                $display("ERROR: busy should be LOW when done is asserted");
+            end
+
             @(negedge clk);
 
             total_cycles = total_cycles + ($time - t0)/10;

@@ -9,7 +9,8 @@ module dm_cache #(parameter WORD_BITS = 2,   // words per block = 2^WORD_BITS (4
     input  wire [31:0] addr,         // byte address
     input  wire [31:0] wdata,
     output wire [31:0] rdata,
-    output reg         done,         // 1-cycle pulse when request finished
+    output reg         done,         // 1-cycle completion pulse
+    output wire        busy,         // high while controller is processing
     // memory side
     output reg         mem_req, mem_we,
     output reg  [31:0] mem_addr,     // word address
@@ -26,6 +27,7 @@ module dm_cache #(parameter WORD_BITS = 2,   // words per block = 2^WORD_BITS (4
 
     localparam IDLE=0, LOOKUP=1, REFILL=2, WRITEMEM=3, DONE=4;
     reg [2:0] state;
+    assign busy = (state != IDLE);
 
     reg [31:0]         data_ram [0:LINES*WORDS-1];
     reg [TAG_BITS-1:0] tag_ram  [0:LINES-1];
