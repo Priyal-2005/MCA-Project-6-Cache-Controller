@@ -1,0 +1,7 @@
+experiment,LAT2,LAT4,LAT8
+T1_sequential,6.0,8.0,12.0
+T2_repeated,3.3,3.6,4.1
+T3_conflict,14.2,21.7,36.7
+T4_write_policy,7.5,10.5,16.5
+T5_random,12.2,18.3,30.6
+T6_full_line_fill,15.0,23.0,39.0
