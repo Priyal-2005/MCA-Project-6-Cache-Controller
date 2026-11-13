@@ -39,6 +39,10 @@ module dm_cache #(parameter WORD_BITS = 2,   // words per block = 2^WORD_BITS (4
     wire [TAG_BITS-1:0]   tag  = l_addr[31:OFF_BITS+INDEX_BITS];
     wire hit = valid_ram[idx] && (tag_ram[idx] == tag);
 
+    // Debug wires for waveforms: the tag and valid bit stored in the indexed line
+    wire [TAG_BITS-1:0] dbg_stored_tag = tag_ram[idx];
+    wire                dbg_valid      = valid_ram[idx];
+
     assign rdata = data_ram[{idx, word}];
 
     always @(posedge clk) begin

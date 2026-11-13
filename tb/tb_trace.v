@@ -76,7 +76,7 @@ module tb_trace;
         $display("accesses=%0d hits=%0d misses=%0d", accesses, hits, misses);
         $display("hit_rate=%0.1f%% miss_rate=%0.1f%%", hit_rate, miss_rate);
         $display("avg_cycles_per_access=%0.2f  AMAT(formula)=%0.2f  no_cache_baseline=%0d",
-                 avg_cycles, amat, 3 + 20);
+                 avg_cycles, amat, LAT);
         if (errors == 0) $display("DATA CHECK PASSED"); else $display("%0d DATA ERRORS", errors);
         $finish;
     end
