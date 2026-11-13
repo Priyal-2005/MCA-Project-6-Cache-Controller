@@ -21,7 +21,8 @@ module dm_cache #(
     input  wire [31:0] mem_rdata,
     input  wire        mem_ack,
     // statistics
-    output reg  [31:0] hits, misses
+    output reg  [31:0] hits, misses,
+    output reg  [31:0] mem_reads, mem_writes
 );
     localparam WORDS = 1 << WORD_BITS;
     localparam LINES = 1 << INDEX_BITS;
@@ -57,6 +58,8 @@ module dm_cache #(
             valid_ram <= 0;
             hits <= 0;
             misses <= 0;
+            mem_reads <= 0;
+            mem_writes <= 0;
             done <= 0;
             mem_req <= 0;
             mem_we <= 0;
@@ -99,6 +102,7 @@ module dm_cache #(
                 end
             end
             REFILL: if (mem_ack) begin
+                mem_reads <= mem_reads + 1;
                 data_ram[{idx, cnt}] <= mem_rdata;
 
                 if (cnt == WORDS-1) begin
@@ -124,7 +128,10 @@ module dm_cache #(
                 end
             end
             WRITEMEM: if (mem_ack) begin
-                mem_req <= 0; mem_we <= 0; state <= DONE;
+                mem_writes <= mem_writes + 1;
+                mem_req <= 0;
+                mem_we <= 0;
+                state <= DONE;
             end
             DONE: begin done <= 1; state <= IDLE; end
             endcase

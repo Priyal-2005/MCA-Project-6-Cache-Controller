@@ -18,6 +18,7 @@ module tb_write_allocate;
     wire [31:0] mem_addr, mem_wdata, mem_rdata;
 
     wire [31:0] hits, misses;
+    wire [31:0] mem_reads, mem_writes;
 
     dm_cache #(.WRITE_ALLOCATE(1)) dut (
         .clk(clk), .rst(rst),
@@ -27,7 +28,8 @@ module tb_write_allocate;
         .mem_req(mem_req), .mem_we(mem_we),
         .mem_addr(mem_addr), .mem_wdata(mem_wdata),
         .mem_rdata(mem_rdata), .mem_ack(mem_ack),
-        .hits(hits), .misses(misses)
+        .hits(hits), .misses(misses),
+        .mem_reads(mem_reads), .mem_writes(mem_writes)
     );
 
     main_mem #(.LAT(LAT)) mem (
@@ -98,6 +100,43 @@ module tb_write_allocate;
         end else begin
             $display("PASS: Main memory updated (write-through)");
         end
+        // Check memory traffic for write-allocate miss
+        if (mem_reads !== 4) begin
+            errors = errors + 1;
+            $display("ERROR: Expected 4 memory reads, got %0d", mem_reads);
+        end else begin
+            $display("PASS: 4 memory reads counted during block refill");
+        end
+
+        if (mem_writes !== 1) begin
+            errors = errors + 1;
+            $display("ERROR: Expected 1 memory write, got %0d", mem_writes);
+        end else begin
+            $display("PASS: 1 memory write counted during write-through");
+        end
+        // Test 1B: Other words in the refilled block must be preserved.
+        $display("\nTEST 1B: PRESERVE OTHER WORDS AFTER REFILL");
+
+        if (dut.data_ram[8] !== 32'd25) begin
+            errors = errors + 1;
+            $display("ERROR: Word 0 was not preserved: %h", dut.data_ram[8]);
+        end else begin
+            $display("PASS: Word 0 preserved");
+        end
+
+        if (dut.data_ram[10] !== 32'd31) begin
+            errors = errors + 1;
+            $display("ERROR: Word 2 was not preserved: %h", dut.data_ram[10]);
+        end else begin
+            $display("PASS: Word 2 preserved");
+        end
+
+        if (dut.data_ram[11] !== 32'd34) begin
+            errors = errors + 1;
+            $display("ERROR: Word 3 was not preserved: %h", dut.data_ram[11]);
+        end else begin
+            $display("PASS: Word 3 preserved");
+        end
 
         // Test 2: Reading the same address should now be a hit.
         $display("\nTEST 2: READ AFTER WRITE-ALLOCATE");
@@ -117,6 +156,37 @@ module tb_write_allocate;
         end else begin
             $display("PASS: Read-back returned DEADBEEF");
         end
+
+        // Test 3: Write-allocate at all four word offsets.
+        $display("\nTEST 3: ALL FOUR WORD OFFSETS");
+
+        access(1, 32'h00000040, 32'hAABBCC00);
+        if (dut.data_ram[16] !== 32'hAABBCC00) begin
+            errors = errors + 1;
+            $display("ERROR: Offset 0 write failed");
+        end else
+            $display("PASS: Offset 0 write");
+
+        access(1, 32'h00000044, 32'hAABBCC11);
+        if (dut.data_ram[17] !== 32'hAABBCC11) begin
+            errors = errors + 1;
+            $display("ERROR: Offset 1 write failed");
+        end else
+            $display("PASS: Offset 1 write");
+
+        access(1, 32'h00000048, 32'hAABBCC22);
+        if (dut.data_ram[18] !== 32'hAABBCC22) begin
+            errors = errors + 1;
+            $display("ERROR: Offset 2 write failed");
+        end else
+            $display("PASS: Offset 2 write");
+
+        access(1, 32'h0000004C, 32'hAABBCC33);
+        if (dut.data_ram[19] !== 32'hAABBCC33) begin
+            errors = errors + 1;
+            $display("ERROR: Offset 3 write failed");
+        end else
+            $display("PASS: Offset 3 write");
 
         $display("\n==============================");
         if (errors == 0)

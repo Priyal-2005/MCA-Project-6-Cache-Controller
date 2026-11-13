@@ -19,6 +19,7 @@ module tb_dm_cache;
     wire [31:0] mem_addr, mem_wdata, mem_rdata;
 
     wire [31:0] hits, misses;
+    wire [31:0] mem_reads, mem_writes;
 
     dm_cache dut(
         .busy(busy),
@@ -29,7 +30,8 @@ module tb_dm_cache;
         .mem_req(mem_req), .mem_we(mem_we),
         .mem_addr(mem_addr), .mem_wdata(mem_wdata),
         .mem_rdata(mem_rdata), .mem_ack(mem_ack),
-        .hits(hits), .misses(misses)
+        .hits(hits), .misses(misses),
+        .mem_reads(mem_reads), .mem_writes(mem_writes)
     );
 
     main_mem #(.LAT(LAT)) mem(
@@ -47,6 +49,7 @@ module tb_dm_cache;
 
     integer k, r;
     integer h_before, m_before;
+    integer reads_before, writes_before;
     integer fill_start_hits, fill_start_misses;
 
     // ------------------------------------------------
@@ -129,7 +132,7 @@ module tb_dm_cache;
             ref_mem[i] = i*3+1;
 
         // Start the tag RAM at 0 so a missing valid check cannot hide behind 'x' values
-        
+
         for (i = 0; i < 64; i = i + 1)
             dut.tag_ram[i] = 0;
 
@@ -224,6 +227,8 @@ module tb_dm_cache;
         // 0x900 conflicts with the previously loaded 0x100/0x500 index.
         h_before = hits;
         m_before = misses;
+        reads_before = mem_reads;
+        writes_before = mem_writes;
 
         access(1, 32'h900, 32'hCAFEF00D);
 
@@ -233,9 +238,25 @@ module tb_dm_cache;
         end else
             $display("PASS: Write miss detected");
 
+        // Verify no block refill and exactly one memory write.
+        if (mem_reads !== reads_before) begin
+            errors = errors + 1;
+            $display("ERROR: No-write-allocate should not read a block");
+        end else
+            $display("PASS: No memory reads during write miss");
+
+        if (mem_writes !== writes_before + 1) begin
+            errors = errors + 1;
+            $display("ERROR: Expected one memory write, got %0d",
+                     mem_writes - writes_before);
+        end else
+            $display("PASS: One memory write counted");
+
         // Next read must miss because write miss did not allocate.
         h_before = hits;
         m_before = misses;
+        reads_before = mem_reads;
+        writes_before = mem_writes;
 
         access(0, 32'h900, 0);
 
@@ -244,6 +265,20 @@ module tb_dm_cache;
             $display("ERROR: Write miss incorrectly allocated a cache line");
         end else
             $display("PASS: Following read misses - no allocation confirmed");
+
+        // A read miss should fetch all four words.
+        if (mem_reads !== reads_before + 4) begin
+            errors = errors + 1;
+            $display("ERROR: Expected 4 memory reads, got %0d",
+                     mem_reads - reads_before);
+        end else
+            $display("PASS: 4 memory reads counted during refill");
+
+        if (mem_writes !== writes_before) begin
+            errors = errors + 1;
+            $display("ERROR: Unexpected memory write during read miss");
+        end else
+            $display("PASS: No memory writes during read miss");
 
         report("T4 write policy");
 

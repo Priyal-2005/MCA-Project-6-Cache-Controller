@@ -23,10 +23,13 @@ stateDiagram-v2
 
     LOOKUP --> DONE: Read hit
     LOOKUP --> REFILL: Read miss
-    LOOKUP --> WRITEMEM: Write hit or write miss
+    LOOKUP --> WRITEMEM: Write hit
+    LOOKUP --> WRITEMEM: Write miss, no-write-allocate
+    LOOKUP --> REFILL: Write miss, write-allocate
 
     REFILL --> REFILL: mem_ack, more words
-    REFILL --> DONE: mem_ack, last word
+    REFILL --> DONE: Read miss, final word
+    REFILL --> WRITEMEM: Write miss, write-allocate, final word
 
     WRITEMEM --> DONE: mem_ack
 
@@ -40,7 +43,7 @@ stateDiagram-v2
 |---|---|
 | IDLE | Waits for a CPU request and captures the request details. |
 | LOOKUP | Checks the valid bit and stored tag to identify a cache hit or miss. |
-| REFILL | Fetches four words from main memory on a read miss. |
+| REFILL | Fetches four words from main memory on a read miss or a write miss when write-allocate is enabled. For a write-allocate miss, the controller writes the requested word after completing the refill. |
 | WRITEMEM | Sends write requests to main memory and waits for acknowledgement. |
 | DONE | Generates a completion pulse and returns to IDLE. |
 
@@ -54,6 +57,8 @@ stateDiagram-v2
 | WRITEMEM | 1 | 1 | 0 |
 | DONE | 0 | 0 | 1 |
 
+Note: The table represents the intended control-signal behaviour during each state. The memory request and write-enable signals are controlled by the FSM and maintained until the corresponding memory operation is acknowledged.
+
 ## 5. Memory Interface Handshake
 
 The controller communicates with main memory using a request-acknowledgement handshake.
@@ -64,14 +69,19 @@ The controller communicates with main memory using a request-acknowledgement han
 
 During a read miss, the REFILL state receives four words from main memory. The memory address increments after each acknowledgement.
 
-Once the final word is received, the controller updates the valid bit and tag before completing the request.
+During a write miss with write-allocate enabled, the controller first refills the complete cache block. After receiving the final word, it updates the requested cache word and initiates a write to main memory. The WRITEMEM state waits for the memory acknowledgement before completing the CPU request.
+
+Once the refill is complete, the controller updates the valid bit and tag.
 
 ## 6. Write Policy
 
-The baseline implementation uses:
+The cache controller supports two write-miss policies while maintaining a write-through policy:
 
-- Write-through: Every write hit updates both the cache and main memory.
-- No-write-allocate: A write miss updates main memory without loading the block into the cache.
+- **Write-through:** Every write updates main memory.
+- **No-write-allocate:** A write miss updates main memory without loading the block into the cache.
+- **Write-allocate:** A write miss first loads the complete block into the cache and then updates the requested word in both the cache and main memory.
+
+The baseline configuration uses no-write-allocate. Write-allocate can be enabled through the WRITE_ALLOCATE parameter.
 
 ## 7. Conclusion
 
