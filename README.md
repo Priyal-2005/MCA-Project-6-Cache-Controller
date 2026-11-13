@@ -93,6 +93,13 @@ iverilog -g2012 -o sim_wa rtl/main_mem.v rtl/dm_cache.v tb/tb_write_allocate.v
 vvp sim_wa
 ```
 
+Run the memory-latency experiment (change `LAT` to 2, 4 or 8; results are in `docs/results/lat_2_4_8_sweep.csv`):
+
+```bash
+iverilog -g2012 -P tb_dm_cache.LAT=8 -o sim_lat rtl/main_mem.v rtl/dm_cache.v tb/tb_lat_sweep.v
+vvp sim_lat
+```
+
 Generate the traces:
 
 ```bash
@@ -163,6 +170,8 @@ Measured with Icarus Verilog, 1 KB / 16 B blocks / LAT = 4. A hit takes 3 cycles
 | writes | 71.1% | 8.53 |
 
 A no-cache access costs LAT = 4 cycles, so at LAT 4 the cache only pays off on the repeated trace. Details, the no-cache baseline, the LAT sweep and the cache/block size sweep are in `docs/results/analysis.md` and the CSV files in `docs/results/`. Plots are in `docs/results/plots/`: hit and miss rate per trace, AMAT per trace, the cache size and block size sweep (random trace), and the latency sweep with and without a cache. All results above use the default no-write-allocate policy.
+
+Note on two different "repeated" results: the trace `repeated.trace` (800 accesses, 99.5% hits, 3.10 cycles) and test T2 in `tb/tb_lat_sweep.v` (128 accesses, 96% hits, 3.6 cycles at LAT 4) are different workloads, so their numbers differ. The LAT 2/4/8 experiment in `docs/results/lat_2_4_8_sweep.csv` comes from the six tests in `tb_lat_sweep.v`, not from the trace files.
 
 Still to be added: synthesis numbers.
 
