@@ -4,9 +4,16 @@ import re
 from pathlib import Path
 import matplotlib.pyplot as plt
 
+
+# --------------------------------------------------
+# PATHS AND HELPERS
+# --------------------------------------------------
+
 ROOT = Path(__file__).resolve().parent.parent
 RESULTS = ROOT / "docs" / "results"
 OUT = RESULTS / "plots"
+DOCS = ROOT / "docs"
+
 OUT.mkdir(parents=True, exist_ok=True)
 
 
@@ -19,10 +26,19 @@ def save_plot(filename):
     plt.tight_layout()
     plt.savefig(OUT / filename, dpi=300, bbox_inches="tight")
     plt.close()
-    print(f"Created: {filename}")
+    print(f"Created: {OUT / filename}")
 
 
-# 1. Hit rate and miss rate comparison
+def save_docs_plot(filename):
+    plt.savefig(DOCS / filename, dpi=300, bbox_inches="tight")
+    plt.close()
+    print(f"Created: {DOCS / filename}")
+
+
+# --------------------------------------------------
+# 1. HIT RATE AND MISS RATE COMPARISON
+# --------------------------------------------------
+
 data = read_csv("results_table.csv")
 
 traces = [r["trace"] for r in data]
@@ -33,6 +49,7 @@ plt.figure(figsize=(11, 5))
 plt.bar(traces, hits, label="Hit Rate")
 plt.bar(traces, misses, bottom=hits, label="Miss Rate")
 
+plt.xlabel("Memory Access Trace")
 plt.ylabel("Percentage (%)")
 plt.title("Cache Hit and Miss Rate Comparison")
 plt.xticks(rotation=35, ha="right")
@@ -42,7 +59,10 @@ plt.legend()
 save_plot("hit_miss_comparison.png")
 
 
-# 2. AMAT comparison
+# --------------------------------------------------
+# 2. AMAT COMPARISON
+# --------------------------------------------------
+
 amat_key = next(
     k for k in data[0]
     if "avg_cycles_per_access" in k
@@ -51,6 +71,7 @@ amat_key = next(
 plt.figure(figsize=(10, 5))
 plt.bar(traces, [float(r[amat_key]) for r in data])
 
+plt.xlabel("Memory Access Trace")
 plt.ylabel("Average Cycles per Access")
 plt.title("AMAT Comparison Across Traces")
 plt.xticks(rotation=35, ha="right")
@@ -58,7 +79,12 @@ plt.xticks(rotation=35, ha="right")
 save_plot("amat_comparison.png")
 
 
-# 3. Cache configuration sweep
+# --------------------------------------------------
+# 3. CACHE CONFIGURATION SWEEP
+# FIX: Plot only random trace to avoid mixing
+# random and matrix_colmajor results.
+# --------------------------------------------------
+
 sweep = read_csv("sweep.csv")
 
 block_sizes = sorted({
@@ -68,8 +94,13 @@ block_sizes = sorted({
 plt.figure(figsize=(9, 5))
 
 for block in block_sizes:
+
     subset = sorted(
-        [r for r in sweep if int(r["block_bytes"]) == block],
+        [
+            r for r in sweep
+            if r["trace"] == "random"
+            and int(r["block_bytes"]) == block
+        ],
         key=lambda r: int(r["cache_bytes"])
     )
 
@@ -82,71 +113,103 @@ for block in block_sizes:
 
 plt.xlabel("Cache Size (KB)")
 plt.ylabel("Hit Rate (%)")
-plt.title("Cache Configuration Sweep")
+plt.title("Cache Configuration Sweep — Random Trace")
 plt.legend()
+plt.grid(True, linestyle="--", alpha=0.5)
 
 save_plot("cache_sweep.png")
 
 
-# 4. Memory latency sweep
-latency = read_csv("lat_sweep.csv")
+# --------------------------------------------------
+# 4. MEMORY LATENCY SWEEP
+# FIX: One no-cache line instead of repeating
+# identical no-cache lines for every trace.
+# --------------------------------------------------
 
+latency = read_csv("lat_sweep.csv")
 first = latency[0]
 
 plt.figure(figsize=(11, 6))
 
-for prefix in ("cache", "nocache"):
+# Cache lines: one for each trace
+cache_columns = [
+    c for c in first
+    if c.startswith("cache_LAT")
+]
 
-    columns = [
-        c for c in first
-        if c.startswith(prefix + "_LAT")
+cache_columns.sort(
+    key=lambda c: int(re.search(r"(\d+)$", c).group(1))
+)
+
+cache_x = [
+    int(re.search(r"(\d+)$", c).group(1))
+    for c in cache_columns
+]
+
+for row in latency:
+
+    cache_values = [
+        float(row[c]) for c in cache_columns
     ]
 
-    columns.sort(
-        key=lambda c: int(re.search(r"(\d+)$", c).group(1))
+    plt.plot(
+        cache_x,
+        cache_values,
+        marker="o",
+        label=f"{row['trace']} (cache)"
     )
 
-    for row in latency:
 
-        values = [float(row[c]) for c in columns]
+# One shared no-cache line
+nocache_columns = [
+    c for c in first
+    if c.startswith("nocache_LAT")
+]
 
-        x = [
-            int(re.search(r"(\d+)$", c).group(1))
-            for c in columns
-        ]
+nocache_columns.sort(
+    key=lambda c: int(re.search(r"(\d+)$", c).group(1))
+)
 
-        plt.plot(
-            x,
-            values,
-            marker="o",
-            label=f"{row['trace']} ({prefix})"
-        )
+nocache_x = [
+    int(re.search(r"(\d+)$", c).group(1))
+    for c in nocache_columns
+]
+
+nocache_values = [
+    float(first[c]) for c in nocache_columns
+]
+
+plt.plot(
+    nocache_x,
+    nocache_values,
+    linestyle="--",
+    linewidth=2,
+    color="black",
+    label="No cache"
+)
 
 plt.xlabel("Memory Latency (Cycles)")
 plt.ylabel("Average Cycles per Access")
 plt.title("Memory Latency Impact")
-plt.legend(fontsize=7)
+plt.legend(fontsize=8)
+plt.grid(True, linestyle="--", alpha=0.5)
 
 save_plot("latency_sweep.png")
 
 
-# 5. Additional charts requested by Priyal
-
-DOCS = ROOT / "docs"
-
-
-def save_docs_plot(filename):
-    plt.savefig(DOCS / filename, dpi=300, bbox_inches="tight")
-    plt.close()
-    print(f"Created: docs/{filename}")
+# --------------------------------------------------
+# 5. ADDITIONAL CHARTS REQUESTED BY PRIYAL
+# --------------------------------------------------
 
 
 # 5A and 5B. Separate cache sweep charts
 
 def make_trace_sweep_chart(trace_name, output_filename, takeaway):
+
     fig, ax = plt.subplots(figsize=(9, 5.5))
 
     for block in (8, 16, 32):
+
         subset = sorted(
             [
                 r for r in sweep
@@ -174,7 +237,13 @@ def make_trace_sweep_chart(trace_name, output_filename, takeaway):
     ax.legend()
 
     fig.subplots_adjust(bottom=0.23)
-    fig.text(0.5, 0.06, takeaway, ha="center", fontsize=9, wrap=True)
+    fig.text(
+        0.5, 0.06,
+        takeaway,
+        ha="center",
+        fontsize=9,
+        wrap=True
+    )
 
     save_docs_plot(output_filename)
 
@@ -188,11 +257,12 @@ make_trace_sweep_chart(
 make_trace_sweep_chart(
     "matrix_colmajor",
     "matrix_colmajor_cache_sweep.png",
-    "The chart compares column-major access hit rates across the tested cache configurations."
+    "Column-major access shows a 0% hit rate across the tested configurations."
 )
 
 
 # 5C. Hit rate comparison for all 8 traces
+# Baseline results: 1 KB cache / 16 B block
 
 fig, ax = plt.subplots(figsize=(11, 5.5))
 
@@ -209,6 +279,7 @@ ax.tick_params(axis="x", rotation=35)
 ax.grid(axis="y", linestyle="--", alpha=0.5)
 
 for bar, rate in zip(bars, hit_rates):
+
     ax.text(
         bar.get_x() + bar.get_width() / 2,
         bar.get_height() + 1,
@@ -218,6 +289,7 @@ for bar, rate in zip(bars, hit_rates):
     )
 
 fig.subplots_adjust(bottom=0.32)
+
 fig.text(
     0.5, 0.025,
     "The chart highlights how different memory access patterns affect cache hit rate.",
@@ -229,5 +301,10 @@ fig.text(
 save_docs_plot("trace_hit_rates.png")
 
 
+# --------------------------------------------------
+# FINISHED
+# --------------------------------------------------
+
 print("\nAll plots generated successfully!")
-print(f"Output folder: {OUT}")
+print(f"Existing plots folder: {OUT}")
+print(f"Additional charts folder: {DOCS}")
