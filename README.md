@@ -177,5 +177,5 @@ Still to be added: synthesis numbers.
 
 ## Links
 
-- Phase I video: _to be added_
+- Phase I video: https://drive.google.com/file/d/1DD9B_PW0EQaov7HUue0Nbp39FaIN0b6A/view?usp=sharing
 - IEEE report: `report/MCA_Project6_Report.pdf` (to be added)
