@@ -1,6 +1,6 @@
 # MCA Project 6: Direct-Mapped Cache Controller
 
-A direct-mapped cache controller written in Verilog, with a main-memory model, a self-checking testbench, trace-driven performance analysis (hit rate, miss rate, AMAT) and synthesis results.
+A direct-mapped cache controller written in Verilog, with a main-memory model, a self-checking testbench and trace-driven performance analysis (hit rate, miss rate, AMAT). Synthesis is planned for Phase II.
 
 Course: Modern Computer Architecture, Newton School of Technology
 
@@ -178,4 +178,4 @@ Still to be added: synthesis numbers.
 ## Links
 
 - Phase I video: https://drive.google.com/file/d/1DD9B_PW0EQaov7HUue0Nbp39FaIN0b6A/view?usp=sharing
-- IEEE report: `report/MCA_Project6_Report.pdf` (to be added)
+- IEEE report: `report/MCA_Project6_Report.pdf`
