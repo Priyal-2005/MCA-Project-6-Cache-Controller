@@ -98,8 +98,17 @@ module tb_traffic;
 
         // CSV row: trace,policy,accesses,reads,writes,hits,misses,hit_rate,
         //          mem_reads,mem_writes,mem_words_total,avg_cycles,data_check
-        $display("CSV,%0s,%0s,%0d,%0d,%0d,%0d,%0d,%0.1f,%0d,%0d,%0d,%0.2f,%0s",
-                 fname, WA ? "write-allocate" : "no-write-allocate",
+        //
+        // The policy name is written with an if/else rather than a ternary. A ternary
+        // between two string literals of different lengths zero-pads the shorter one
+        // ("write-allocate" is 112 bits, "no-write-allocate" is 136), and some versions
+        // of Icarus Verilog print that padding instead of skipping it, which leaves the
+        // policy column blank for the write-allocate rows. ("PASS" and "FAIL" below are
+        // both 32 bits, so that ternary is safe.)
+        $write("CSV,%0s,", fname);
+        if (WA) $write("write-allocate");
+        else    $write("no-write-allocate");
+        $display(",%0d,%0d,%0d,%0d,%0d,%0.1f,%0d,%0d,%0d,%0.2f,%0s",
                  accesses, reads, writes, hits, misses, hit_rate,
                  mem_reads, mem_writes, mem_reads + mem_writes, avg_cycles,
                  errors == 0 ? "PASS" : "FAIL");
