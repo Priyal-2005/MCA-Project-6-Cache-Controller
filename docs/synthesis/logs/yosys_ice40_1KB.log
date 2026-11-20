@@ -1,0 +1,91 @@
+Yosys iCE40 synthesis (synth_ice40), INDEX_BITS=6
+Tool: Yosys 0.71+post (git sha1 5628c13240f670b97aaaca3d47940c4afb8ff572, Release, AppleClang clang++ 21.0.0.21000401)
+Trimmed from the full Yosys log: statistics and check sections only.
+Regenerate the full log with scripts/run_synth.sh (see the yosys -l argument).
+
+3.4. Executing CHECK pass (checking for obvious problems).
+Checking module dm_cache...
+Found and reported 0 problems.
+
+3.9. Executing CHECK pass (checking for obvious problems).
+Checking module dm_cache...
+Found and reported 0 problems.
+
+3.40. Executing CHECK pass (checking for obvious problems).
+Checking module dm_cache...
+Found and reported 0 problems.
+
+3.50. Printing statistics.
+
+=== dm_cache ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      629 wires
+     1501 wire bits
+      629 public wires
+     1501 public wire bits
+       19 ports
+      329 port bits
+        4 cells
+        4   SB_RAM40_4K
+     1029 submodules
+      155   SB_CARRY
+       56   SB_DFF
+      125   SB_DFFE
+      201   SB_DFFESR
+        1   SB_DFFSR
+      491   SB_LUT4
+
+=== design hierarchy ===
+
+        +----------Count including submodules.
+        | 
+        4 dm_cache
+
+        +----------Count including submodules.
+        | 
+      629 wires
+     1501 wire bits
+      629 public wires
+     1501 public wire bits
+       19 ports
+      329 port bits
+        - memories
+        - memory bits
+        - processes
+        4 cells
+        4   SB_RAM40_4K
+     1029 submodules
+      155   SB_CARRY
+       56   SB_DFF
+      125   SB_DFFE
+      201   SB_DFFESR
+        1   SB_DFFSR
+      491   SB_LUT4
+
+3.51. Executing CHECK pass (checking for obvious problems).
+Checking module dm_cache...
+Found and reported 0 problems.
+
+4. Printing statistics.
+
+=== dm_cache ===
+
+        +----------Local Count, excluding submodules.
+        | 
+      629 wires
+     1501 wire bits
+      629 public wires
+     1501 public wire bits
+       19 ports
+      329 port bits
+     1033 cells
+      155   SB_CARRY
+       56   SB_DFF
+      125   SB_DFFE
+      201   SB_DFFESR
+        1   SB_DFFSR
+      491   SB_LUT4
+        4   SB_RAM40_4K
+

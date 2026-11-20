@@ -1,0 +1,48 @@
+Post-synthesis gate-level simulation of the iCE40 netlist (512B)
+Netlist: yosys synth_ice40, simulated with the iCE40 cell models.
+
+Trace: traces/matrix_colmajor.trace
+accesses=1024 hits=0 misses=1024
+hit_rate=0.0% miss_rate=100.0%
+DATA CHECK PASSED
+
+Trace: traces/matrix_rowmajor.trace
+accesses=1024 hits=768 misses=256
+hit_rate=75.0% miss_rate=25.0%
+DATA CHECK PASSED
+
+Trace: traces/random.trace
+accesses=2000 hits=239 misses=1761
+hit_rate=11.9% miss_rate=88.0%
+DATA CHECK PASSED
+
+Trace: traces/repeated.trace
+accesses=800 hits=796 misses=4
+hit_rate=99.5% miss_rate=0.5%
+DATA CHECK PASSED
+
+Trace: traces/sequential.trace
+accesses=512 hits=384 misses=128
+hit_rate=75.0% miss_rate=25.0%
+DATA CHECK PASSED
+
+Trace: traces/stride1024.trace
+accesses=1000 hits=0 misses=1000
+hit_rate=0.0% miss_rate=100.0%
+DATA CHECK PASSED
+
+Trace: traces/stride16.trace
+accesses=1000 hits=0 misses=1000
+hit_rate=0.0% miss_rate=100.0%
+DATA CHECK PASSED
+
+Trace: traces/writes.trace
+accesses=38 hits=27 misses=11
+hit_rate=71.1% miss_rate=28.9%
+DATA CHECK PASSED
+
+Trace: docs/results/write_stream.trace
+accesses=512 hits=0 misses=512
+hit_rate=0.0% miss_rate=100.0%
+DATA CHECK PASSED
+

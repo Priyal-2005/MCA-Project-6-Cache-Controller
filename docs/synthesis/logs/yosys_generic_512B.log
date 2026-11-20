@@ -1,0 +1,72 @@
+Yosys generic synthesis (synth), INDEX_BITS=5
+Tool: Yosys 0.71+post (git sha1 5628c13240f670b97aaaca3d47940c4afb8ff572, Release, AppleClang clang++ 21.0.0.21000401)
+Trimmed from the full Yosys log: statistics and check sections only.
+Regenerate the full log with scripts/run_synth.sh (see the yosys -l argument).
+
+3.4. Executing CHECK pass (checking for obvious problems).
+Checking module dm_cache...
+Found and reported 0 problems.
+
+3.25. Printing statistics.
+
+=== dm_cache ===
+
+        +----------Local Count, excluding submodules.
+        | 
+    10521 wires
+    16112 wire bits
+      190 public wires
+     5295 public wire bits
+       19 ports
+      329 port bits
+    15652 cells
+      280   $_ANDNOT_
+     2249   $_AND_
+     4957   $_DFFE_PP_
+        7   $_DFF_P_
+     2448   $_MUX_
+     2292   $_NAND_
+      537   $_NOR_
+       24   $_NOT_
+     1495   $_ORNOT_
+     1011   $_OR_
+        2   $_SDFFCE_PN0P_
+      167   $_SDFFE_PP0P_
+        1   $_SDFF_PP0_
+       30   $_XNOR_
+      152   $_XOR_
+
+3.26. Executing CHECK pass (checking for obvious problems).
+Checking module dm_cache...
+Found and reported 0 problems.
+
+4. Printing statistics.
+
+=== dm_cache ===
+
+        +----------Local Count, excluding submodules.
+        | 
+    10521 wires
+    16112 wire bits
+      190 public wires
+     5295 public wire bits
+       19 ports
+      329 port bits
+    15652 cells
+      280   $_ANDNOT_
+     2249   $_AND_
+     4957   $_DFFE_PP_
+        7   $_DFF_P_
+     2448   $_MUX_
+     2292   $_NAND_
+      537   $_NOR_
+       24   $_NOT_
+     1495   $_ORNOT_
+     1011   $_OR_
+        2   $_SDFFCE_PN0P_
+      167   $_SDFFE_PP0P_
+        1   $_SDFF_PP0_
+       30   $_XNOR_
+      152   $_XOR_
+
+Yosys 0.71+post (git sha1 5628c13240f670b97aaaca3d47940c4afb8ff572, Release, AppleClang clang++ 21.0.0.21000401)
