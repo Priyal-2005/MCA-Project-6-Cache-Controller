@@ -60,11 +60,11 @@ multiplexer trees needed to address them. The flip-flop count is simply the stor
 | Total storage bits | 9 664 | 4 864 |
 | Flip-flops reported by generic synthesis | 9 935 | 5 134 |
 
-The difference in each column (271 and 270 flip-flops) is the actual control state: the FSM
-state register, the latched request (`l_addr`, `l_wdata`, `l_we`), the refill counter `cnt`,
-`pending_write`, the memory-side output registers, and the four 32-bit statistics counters.
-That control state is what the controller really costs; the rest is memory that any real
-target maps into dedicated RAM.
+The difference in each column (271 and 270 flip-flops) is everything that is not array
+storage: the FSM state register, the latched request (`l_addr`, `l_wdata`, `l_we`), the
+refill counter `cnt`, `pending_write`, the memory-side output registers, and the four 32-bit
+statistics counters. The per-group breakdown is in the next section. That state is what the
+controller really costs; the rest is memory that any real target maps into dedicated RAM.
 
 ### Technology-mapped synthesis (iCE40)
 
@@ -78,10 +78,29 @@ yosys -p "read_verilog rtl/dm_cache.v; synth_ice40 -top dm_cache; stat"
 | 512 B | 412 | 154 | 352 | 4 |
 
 With real primitives available the arrays are inferred as block RAM and the flip-flop count
-falls from 9 935 to 383, a factor of 26. The 383 flip-flops are the control state identified
-above (271) plus `valid_ram` (64 bits, kept in flip-flops because it is cleared in a single
-cycle on reset, which a block RAM cannot do) and a few mapping registers. This is the number
-that describes the controller, and it is the one to quote.
+falls from 9 935 to 383, a factor of 26. Counted from the netlist by the signal each
+flip-flop drives:
+
+| Group | Flip-flops | What |
+|---|---|---|
+| Statistics counters | 128 | `hits`, `misses`, `mem_reads`, `mem_writes`, 32 bits each |
+| Memory-side outputs | 64 | `mem_addr`, `mem_wdata` |
+| Latched request | 63 | `l_addr` (30 surviving bits, of which 6 are `idx`), `l_wdata` (32), `l_we` |
+| `valid_ram` | 64 | one bit per line, kept in flip-flops because it is cleared in a single cycle on reset, which a block RAM cannot do |
+| Block RAM read-data registers | ~52 | 31 on `data_ram`, 21 on `tag_ram` |
+| FSM and control | 9 | `state` (3), `cnt` (2), `done`, `mem_req`, `mem_we`, `pending_write` |
+
+These groups account for about 380 of the 383; the small remainder is signals the mapping
+splits across groups, and the read-data register count is approximate for the same reason.
+
+The block RAM read-data registers are worth noting: the RTL reads both arrays
+combinationally, but `SB_RAM40_4K` has a synchronous read port, so the mapping adds
+registers on the read data. They are a cost of mapping an asynchronous-read description
+onto a synchronous memory primitive, not of the cache logic itself.
+
+So of the 383, roughly 128 are statistics counters that a production cache would not carry,
+about 52 are that mapping artefact, and the remaining ~200 are the cache's real state: the
+latched request, the memory-side output registers, the valid bits and the FSM.
 
 Why the arrays map cleanly: the cache reads `tag_ram[idx]` and `data_ram[{idx, word}]`
 combinationally, but `idx` and `word` are both slices of `l_addr`, which is a register loaded
@@ -130,11 +149,19 @@ reports how far it falls short. Full logs in `logs/nextpnr_1KB.log` and
 `logs/nextpnr_512B.log`; the annotated path is in `critical_path_1KB.txt`.
 
 **Quote the post-routing figure, not the post-placement one.** Each nextpnr log contains two
-`Max frequency` lines: an optimistic estimate made after placement with ideal routing
-(88.83 MHz for the 1 KB configuration) and the real figure after routing (79.85 MHz). The
-routed number is the one that counts, and it is the one in the tables above and in
-`resource_utilization.csv`. In the logs the routed line is the last one, printed as a
-`Warning:` because it misses the 100 MHz constraint we deliberately asked for.
+`Max frequency` lines: an estimate made after placement, before routing delays are known,
+and the real figure after routing. The post-placement estimate is not reliably optimistic or
+pessimistic — it is simply made with incomplete information, and it lands on either side:
+
+| Configuration | After placement | After routing (quote this) |
+|---|---|---|
+| 1 KB | 88.83 MHz | **79.85 MHz** |
+| 512 B | 78.61 MHz | **79.90 MHz** |
+
+For 1 KB the estimate is 11% high; for 512 B it is 1.6% low. The routed number is the one
+that counts, and it is the one in the tables above and in `resource_utilization.csv`. In the
+logs the routed line is always the last one, printed as a `Warning:` because it misses the
+100 MHz constraint we deliberately asked for.
 
 ### The critical path is the hit path
 
