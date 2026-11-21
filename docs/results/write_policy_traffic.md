@@ -49,3 +49,9 @@ no-write-allocate it sends one word to memory and does not refill at all, about 
 **Use the measured `avg_cycles_per_access` for any trace containing writes.** The existing
 results table already does this correctly for `writes` (8.53, not 8.79), so no published
 number needs changing.
+
+## Memory Traffic Plot
+
+![Memory Traffic Comparison](plots/memory_traffic_comparison.png)
+
+**Takeaway:** Write-allocate doubles memory traffic for write_stream (512 to 1024 words), while both policies produce identical traffic for writes.
