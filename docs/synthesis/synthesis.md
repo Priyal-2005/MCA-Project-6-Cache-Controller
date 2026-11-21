@@ -1,227 +1,270 @@
 # Synthesis: resource utilisation and maximum frequency
 
-Owner: Anusha (Controller, Memory Interface & Synthesis Lead)
-Design under synthesis: `rtl/dm_cache.v` (direct-mapped, write-through cache controller)
-Reproduce everything below with: `bash scripts/run_synth.sh`
+**Owner:** Anusha (Controller, Memory Interface & Synthesis Lead)
 
-## Headline numbers
+**Design:** `rtl/dm_cache.v` — direct-mapped, write-through cache controller
+
+**Reproduce:** `bash scripts/run_synth.sh`
+
+---
+
+## Summary
+
+The cache controller was synthesised using the open-source Yosys and nextpnr-ice40 toolchain for the Lattice iCE40 HX8K FPGA.
+
+Both cache configurations successfully passed post-synthesis gate-level simulation on all nine trace tests.
 
 | Configuration | Logic cells (iCE40 HX8K) | Block RAM | Maximum frequency |
-|---|---|---|---|
-| 1 KB, 64 lines, 16 B blocks (default) | 740 / 7680 (9%) | 4 / 32 (12%) | **79.85 MHz** |
-| 512 B, 32 lines, 16 B blocks | 662 / 7680 (8%) | 4 / 32 (12%) | **79.90 MHz** |
+|---|---:|---:|---:|
+| 1 KB, 64 lines, 16 B blocks (default) | 740 / 7680 (9%) | 4 / 32 (12%) | 79.85 MHz |
+| 512 B, 32 lines, 16 B blocks | 662 / 7680 (8%) | 4 / 32 (12%) | 79.90 MHz |
 
-The synthesised netlist was also simulated at gate level and passed the data check on all
-nine traces, so these numbers belong to a design that is verified after synthesis, not only
-before it.
+The 512 B configuration uses fewer logic resources, while both configurations use the same number of block RAM primitives and achieve nearly identical maximum frequencies.
 
-## Tool flow
+---
 
-Vivado was not available on the machine used, so the whole flow is open-source and runs on
-macOS. Three stages, all driven by `scripts/run_synth.sh`:
+## Toolchain and target device
 
-| Stage | Tool | What it gives |
-|---|---|---|
-| 1. Generic synthesis | Yosys 0.71 `synth` | Vendor-independent cell count |
-| 2. Technology mapping | Yosys 0.71 `synth_ice40` | Real FPGA primitives, block RAM inference |
-| 3. Place and route | nextpnr-ice40 0.11.1 | Device utilisation and maximum clock frequency |
+Vivado was unavailable in the development environment, so an open-source synthesis and place-and-route flow was used.
 
-Target device for stages 2 and 3: Lattice iCE40 HX8K, package CT256 (7680 logic cells,
-32 block RAMs of 4 Kbit, 206 I/O pins).
+| Tool | Version / purpose |
+|---|---|
+| Yosys | 0.71 — generic synthesis and iCE40 technology mapping |
+| nextpnr-ice40 | 0.11.1 — placement, routing and timing analysis |
+| Target FPGA | Lattice iCE40 HX8K CT256 |
+| Icarus Verilog | Gate-level simulation |
 
-Install:
+The target iCE40 HX8K device provides:
+
+- 7,680 logic cells
+- 32 embedded 4 Kbit block RAM primitives
+- 206 I/O pins
+
+Install the required tools on macOS using:
 
 ```bash
 brew install yosys nextpnr-ice40 icestorm icarus-verilog
 ```
 
+---
+
 ## 1. Resource utilisation
 
-### Generic synthesis (no memory primitives)
+### 1.1 Generic Yosys synthesis
 
-```bash
-yosys -p "read_verilog rtl/dm_cache.v; synth -top dm_cache; stat"
-```
+The generic synthesis results show the resources required before mapping the design to the target FPGA technology.
 
-| Configuration | Total cells | of which flip-flops |
-|---|---|---|
-| 1 KB | 30 922 | 9 935 |
-| 512 B | 15 652 | 5 134 |
+| Metric | 1 KB cache | 512 B cache |
+|---|---:|---:|
+| Total generic cells | 30,922 | 15,652 |
+| Flip-flops (FFs) | 9,935 | 5,134 |
 
-**These numbers must not be read as the cost of the design.** The generic Yosys flow has no
-memory primitives, so it implements the cache arrays as individual flip-flops plus the
-multiplexer trees needed to address them. The flip-flop count is simply the storage in bits:
+The generic synthesis flow does not map the cache arrays into FPGA memory primitives. Instead, the arrays are represented using flip-flops and multiplexing logic.
 
-| Array | 1 KB | 512 B |
-|---|---|---|
-| `data_ram` (lines x 4 words x 32 bits) | 8 192 | 4 096 |
-| `tag_ram` (lines x tag bits) | 64 x 22 = 1 408 | 32 x 23 = 736 |
-| `valid_ram` (1 bit per line) | 64 | 32 |
-| Total storage bits | 9 664 | 4 864 |
-| Flip-flops reported by generic synthesis | 9 935 | 5 134 |
+The generic flip-flop count therefore provides an indication of the storage and state requirements of the design.
 
-The difference in each column (271 and 270 flip-flops) is everything that is not array
-storage: the FSM state register, the latched request (`l_addr`, `l_wdata`, `l_we`), the
-refill counter `cnt`, `pending_write`, the memory-side output registers, and the four 32-bit
-statistics counters. The per-group breakdown is in the next section. That state is what the
-controller really costs; the rest is memory that any real target maps into dedicated RAM.
+### 1.2 Cache storage breakdown
 
-### Technology-mapped synthesis (iCE40)
+| Storage element | 1 KB configuration | 512 B configuration |
+|---|---:|---:|
+| Data RAM | 8,192 bits | 4,096 bits |
+| Tag RAM | 64 × 22 = 1,408 bits | 32 × 23 = 736 bits |
+| Valid RAM | 64 bits | 32 bits |
+| Total array storage | 9,664 bits | 4,864 bits |
+| Generic Yosys FF count | 9,935 | 5,134 |
+| Additional controller FFs | 271 | 270 |
 
-```bash
-yosys -p "read_verilog rtl/dm_cache.v; synth_ice40 -top dm_cache; stat"
-```
+The difference between the array storage and the generic FF count comes from controller state, including:
 
-| Configuration | LUT4 | Carry | Flip-flops | Block RAM (SB_RAM40_4K) |
-|---|---|---|---|---|
-| 1 KB | 491 | 155 | 383 | 4 |
-| 512 B | 412 | 154 | 352 | 4 |
+- FSM state
+- Latched request information
+- Refill counter
+- `pending_write`
+- Memory-side outputs
+- Four 32-bit statistics counters
 
-With real primitives available the arrays are inferred as block RAM and the flip-flop count
-falls from 9 935 to 383, a factor of 26. Counted from the netlist by the signal each
-flip-flop drives:
+These controller registers account for approximately 271 FFs in the 1 KB configuration and 270 FFs in the 512 B configuration.
 
-| Group | Flip-flops | What |
-|---|---|---|
-| Statistics counters | 128 | `hits`, `misses`, `mem_reads`, `mem_writes`, 32 bits each |
-| Memory-side outputs | 64 | `mem_addr`, `mem_wdata` |
-| Latched request | 63 | `l_addr` (30 surviving bits, of which 6 are `idx`), `l_wdata` (32), `l_we` |
-| `valid_ram` | 64 | one bit per line, kept in flip-flops because it is cleared in a single cycle on reset, which a block RAM cannot do |
-| Block RAM read-data registers | ~52 | 31 on `data_ram`, 21 on `tag_ram` |
-| FSM and control | 9 | `state` (3), `cnt` (2), `done`, `mem_req`, `mem_we`, `pending_write` |
+### 1.3 iCE40 technology-mapped resources
 
-These groups account for about 380 of the 383; the small remainder is signals the mapping
-splits across groups, and the read-data register count is approximate for the same reason.
+After technology mapping with Yosys `synth_ice40`, the resource counts are:
 
-The block RAM read-data registers are worth noting: the RTL reads both arrays
-combinationally, but `SB_RAM40_4K` has a synchronous read port, so the mapping adds
-registers on the read data. They are a cost of mapping an asynchronous-read description
-onto a synchronous memory primitive, not of the cache logic itself.
+| Resource | 1 KB cache | 512 B cache |
+|---|---:|---:|
+| LUT4 | 491 | 412 |
+| Carry cells | 155 | 154 |
+| Flip-flops | 383 | 352 |
+| Block RAM (BRAM) | 4 | 4 |
 
-So of the 383, roughly 128 are statistics counters that a production cache would not carry,
-about 52 are that mapping artefact, and the remaining ~200 are the cache's real state: the
-latched request, the memory-side output registers, the valid bits and the FSM.
+The smaller cache configuration reduces LUT4 usage from 491 to 412 and mapped flip-flops from 383 to 352.
 
-Why the arrays map cleanly: the cache reads `tag_ram[idx]` and `data_ram[{idx, word}]`
-combinationally, but `idx` and `word` are both slices of `l_addr`, which is a register loaded
-in `IDLE`. Yosys can therefore absorb that address register into the block RAM's synchronous
-read port without changing behaviour, which is why no extra latency appears and why the
-post-synthesis simulation (section 3) matches the RTL cycle for cycle.
+The carry-cell count remains almost unchanged.
 
-### Why block RAM usage does not fall with cache size
+### 1.4 Flip-flop breakdown
 
-Both configurations use 4 block RAMs even though the 512 B cache stores half as much. On
-iCE40 an `SB_RAM40_4K` in the mode the tool selected (`READ_MODE = WRITE_MODE = 0`) is
-**256 words x 16 bits**. Both arrays are wider than 16 bits, so each needs two block RAMs
-side by side to make up its width:
+The 383 mapped flip-flops in the 1 KB configuration can be approximately explained as follows:
 
-| Array | Width | Depth (1 KB) | Depth (512 B) | Block RAMs |
-|---|---|---|---|---|
-| `data_ram` | 32 bits | 256 | 128 | 2 (width split 16 + 16) |
-| `tag_ram` | 22 / 23 bits | 64 | 32 | 2 (width split) |
+| Component | Flip-flops |
+|---|---:|
+| Statistics counters | 128 |
+| Memory-side outputs | 64 |
+| Latched request | 63 |
+| Valid RAM | 64 |
+| BRAM read-data registers | ~52 |
+| FSM and control | 9 |
+| **Total** | **380** |
 
-The block RAM count is limited by **width**, not by depth. Halving the number of lines halves
-the depth used inside each block RAM but does not reduce how many are needed, so the count
-stays at 4. The saving from the smaller cache shows up in the logic instead: 491 to 412 LUT4
-and 740 to 662 placed logic cells, because the index decode, the address arithmetic and the
-tag comparator all get one bit narrower.
+The breakdown is approximate; the mapped total is 383 FFs.
 
-### Placed and routed utilisation
+The additional mapped registers are partly explained by the BRAM read-data registers. The asynchronous RTL read behaviour is implemented using synchronous BRAM read ports, requiring registers around the memory interface.
 
-| Resource | 1 KB | 512 B | Available |
-|---|---|---|---|
-| Logic cells (ICESTORM_LC) | 740 (9%) | 662 (8%) | 7 680 |
-| Block RAM (ICESTORM_RAM) | 4 (12%) | 4 (12%) | 32 |
-| I/O (SB_IO) | 6 (2%) | 6 (2%) | 206 |
-| Global buffers (SB_GB) | 3 | 3 | 8 |
+The statistics counters account for 128 flip-flops, while approximately 52 registers are associated with the BRAM read-data mapping.
 
-The design is small: a 1 KB cache controller occupies under a tenth of a mid-range iCE40.
+### 1.5 Block RAM utilisation
 
-## 2. Maximum frequency
+Both configurations use four `SB_RAM40_4K` primitives.
 
-```
-Max frequency for clock 'clk': 79.85 MHz   (1 KB configuration)
-Max frequency for clock 'clk': 79.90 MHz   (512 B configuration)
-```
+The iCE40 BRAM primitive supports a 256-word × 16-bit configuration. The cache data array is 32 bits wide and therefore uses two BRAMs.
 
-Reported by nextpnr-ice40 after routing, with a 100 MHz constraint requested so that the tool
-reports how far it falls short. Full logs in `logs/nextpnr_1KB.log` and
-`logs/nextpnr_512B.log`; the annotated path is in `critical_path_1KB.txt`.
+The tag array is 22 or 23 bits wide and also requires two BRAMs.
 
-**Quote the post-routing figure, not the post-placement one.** Each nextpnr log contains two
-`Max frequency` lines: an estimate made after placement, before routing delays are known,
-and the real figure after routing. The post-placement estimate is not reliably optimistic or
-pessimistic — it is simply made with incomplete information, and it lands on either side:
+| Array | BRAMs used |
+|---|---:|
+| Data RAM | 2 |
+| Tag RAM | 2 |
+| **Total** | **4** |
 
-| Configuration | After placement | After routing (quote this) |
-|---|---|---|
-| 1 KB | 88.83 MHz | **79.85 MHz** |
-| 512 B | 78.61 MHz | **79.90 MHz** |
+The BRAM count is primarily determined by the width of the arrays rather than their depth. This explains why both cache configurations use the same number of BRAM primitives.
 
-For 1 KB the estimate is 11% high; for 512 B it is 1.6% low. The routed number is the one
-that counts, and it is the one in the tables above and in `resource_utilization.csv`. In the
-logs the routed line is always the last one, printed as a `Warning:` because it misses the
-100 MHz constraint we deliberately asked for.
+The arrays map cleanly because the `idx` and `word` signals are slices of the latched `l_addr`, allowing Yosys to infer the memory structures.
 
-### The critical path is the hit path
+### 1.6 Placed-and-routed device utilisation
 
-The 1 KB critical path is 12.52 ns (1 / 12.52 ns = 79.9 MHz), and it runs exactly where the
-architecture says the limit should be:
+The nextpnr place-and-route results for the iCE40 HX8K are:
 
-| Segment | Delay | What it is |
-|---|---|---|
-| Block RAM clock-to-output | 2.15 ns | reading the stored tag, `tag_ram[idx]` |
-| 7 levels of LUT4 | 2.47 ns | 22-bit tag comparator and the `hit` / FSM next-state logic |
-| Routing (8 hops) | 7.80 ns | wiring between those cells |
-| Setup | 0.10 ns | at the clock enable of the `mem_addr` register |
-| **Total** | **12.52 ns** | |
+| Resource | 1 KB cache | 512 B cache | Device capacity |
+|---|---:|---:|---:|
+| Logic cells | 740 (9%) | 662 (8%) | 7,680 |
+| BRAM | 4 (12%) | 4 (12%) | 32 |
+| I/O pins | 6 (2%) | 6 (2%) | 206 |
+| Global buffers | 3 | 3 | 8 |
 
-Start point: `u_cache.tag_ram.0.0_RAM.RDATA_6` (a tag bit leaving block RAM).
-End point: the clock enable of the `mem_addr` register, which is control logic.
+The design occupies less than one tenth of the available logic cells on the target device.
 
-So the limiting path is **tag RAM read, then tag compare, then control decision** — the hit
-path. That is the fundamental reason this design cannot be clocked arbitrarily fast: deciding
-hit or miss in a single cycle means a memory read, a 22-bit equality compare and the FSM
-branch must all complete inside one clock period. The refill and write-through paths are not
-critical, because they only count words and increment an address while waiting on `mem_ack`.
+Reducing the cache size from 1 KB to 512 B reduces placed logic usage by 78 cells, while BRAM usage remains unchanged.
 
-The 512 B configuration is marginally faster (79.90 vs 79.85 MHz, a 0.05% difference, which
-is placement noise rather than a real effect). This is itself the expected result: the tag
-comparator grows by one bit when the index shrinks by one bit, so the hit path is almost the
-same length in both. Cache size changes area, not clock speed, in this design.
+### 1.7 Resource comparison
 
-### Routing dominates
+![Resource utilisation comparison: 1 KB vs 512 B](resource_comparison.png)
 
-Of the 12.52 ns, 4.73 ns is logic and 7.79 ns is routing — routing is 62% of the period. That
-is characteristic of a small, routing-limited FPGA fabric. On a device with faster
-interconnect, or in an ASIC flow, the same logic depth would allow a substantially higher
-clock; the 4.73 ns logic-only path corresponds to roughly 210 MHz. The 79.85 MHz figure
-should therefore be quoted as *the maximum frequency of this design on an iCE40 HX8K*, not as
-a property of the architecture.
 
-### A harness is needed to measure timing
+The machine-readable results are stored in:
 
-`dm_cache` has 329 port bits: two 32-bit CPU buses, three 32-bit memory-side buses and four
-32-bit statistics counters. No iCE40 package has that many pins (the largest, CT256, has
-206), so the module cannot be placed as a chip on its own. In a real system this is not a
-problem, because the cache is an internal block between the CPU and the memory controller and
-none of these signals are chip pins.
+`docs/synthesis/resource_utilization.csv`
 
-For the timing run only, `syn_wrap.v` instantiates the cache with 6 pins: wide inputs are
-driven from a shift register fed by one pin, and every output is observed through a two-stage
-registered XOR tree. Nothing inside the cache can then be constant-folded or removed as
-dangling, and the observation logic is kept short enough (one XOR reduction per bus,
-registered, then combined) that it does not become the critical path — confirmed by the
-critical path above, which lies entirely inside `u_cache`.
+The CSV contains the generic synthesis counts, iCE40 mapped resource counts, placed-and-routed utilisation, and maximum frequency for both configurations.
 
-Resource numbers in section 1 come from `dm_cache` synthesised on its own, never from the
-harness, so the harness does not inflate or deflate the area figures.
+The main comparison is:
 
-## 3. Post-synthesis verification
+| Metric | 1 KB | 512 B | Difference |
+|---|---:|---:|---:|
+| Generic cells | 30,922 | 15,652 | 15,270 fewer in 512 B |
+| Generic FFs | 9,935 | 5,134 | 4,801 fewer in 512 B |
+| LUT4 | 491 | 412 | 79 fewer in 512 B |
+| Carry cells | 155 | 154 | 1 fewer in 512 B |
+| Mapped FFs | 383 | 352 | 31 fewer in 512 B |
+| BRAM | 4 | 4 | No change |
+| Placed logic cells | 740 | 662 | 78 fewer in 512 B |
 
-A resource count only means something if the netlist still works. `scripts/run_synth.sh`
-writes the iCE40 netlist, compiles it against the Lattice cell simulation models and reruns
-the trace testbench on it:
+The resource comparison shows that reducing cache capacity decreases the amount of logic and register storage required. However, the BRAM count remains the same because both configurations require the same number of memory primitives to implement their array widths.
+
+---
+
+## 2. Maximum frequency and timing analysis
+
+### 2.1 Maximum frequency
+
+The maximum operating frequencies reported by nextpnr after routing are:
+
+| Configuration | Post-placement frequency | Post-route frequency |
+|---|---:|---:|
+| 1 KB cache | 88.83 MHz | 79.85 MHz |
+| 512 B cache | 78.61 MHz | 79.90 MHz |
+
+The post-route values are used as the final maximum-frequency results because they include routing delays.
+
+The timing constraint supplied to nextpnr was 100 MHz.
+
+The two configurations achieve nearly identical post-route frequencies. The 512 B configuration is marginally faster by 0.05%, which is within the expected variation caused by placement and routing.
+
+This indicates that cache capacity affects resource utilisation more significantly than it affects the critical-path delay.
+
+### 2.2 Critical path
+
+The critical path for the 1 KB configuration is approximately 12.52 ns.
+
+\[
+f_{\max} = \frac{1}{12.52\text{ ns}} \approx 79.9\text{ MHz}
+\]
+
+The critical path passes through the tag RAM read, tag comparison, hit/control logic and routing before reaching the memory-address register clock-enable logic.
+
+The approximate delay breakdown is:
+
+| Critical-path component | Delay |
+|---|---:|
+| BRAM clock-to-output | 2.15 ns |
+| Seven LUT4 logic levels | 2.47 ns |
+| Routing (8 hops) | 7.80 ns |
+| Setup time | 0.10 ns |
+| **Total** | **12.52 ns** |
+
+The critical path starts at:
+
+`u_cache.tag_ram.0.0_RAM.RDATA_6`
+
+The endpoint is the memory-address register clock-enable logic.
+
+### 2.3 Timing observations
+
+The critical path is a hit-path timing path:
+
+1. Tag RAM read
+2. Tag comparison
+3. Hit and FSM control logic
+4. Routing to the destination register
+
+Routing contributes approximately 62% of the total critical-path delay.
+
+The logic and BRAM contribution is approximately 4.73 ns, while routing contributes approximately 7.80 ns.
+
+The logic-only equivalent frequency would be approximately 210 MHz, but the actual post-route result is limited by routing delay.
+
+This demonstrates that routing, rather than the amount of cache storage, is the dominant timing limitation in this implementation.
+
+The reported frequency is specific to the Lattice iCE40 HX8K target and should not be interpreted as a device-independent frequency for the cache architecture.
+
+### 2.4 Timing harness
+
+The complete cache interface contains 329 port bits, exceeding the 206 package I/O pins available on the target device.
+
+A timing harness, `syn_wrap.v`, was therefore used for place-and-route timing analysis.
+
+The harness exposes six pins and uses a shift-register input with a two-stage registered XOR output observation.
+
+The critical path being measured remains inside the cache design.
+
+The resource utilisation figures are taken from `dm_cache.v` itself, not from the timing harness.
+
+---
+
+## 3. Post-synthesis functional verification
+
+After synthesis, the generated netlist is simulated using the Lattice iCE40 cell simulation model.
+
+The simulation checks the synthesised implementation against the trace testbench.
+
+The relevant simulation command is:
 
 ```bash
 iverilog -g2012 -o sim_post \
@@ -229,44 +272,127 @@ iverilog -g2012 -o sim_post \
   netlist.v rtl/main_mem.v tb/tb_trace.v
 ```
 
-Result, both configurations: **9 / 9 traces pass the data check**, with hit, miss and
-cycle counts identical to the RTL simulation. Logs in `logs/postsynth_sim_1KB.log` and
-`logs/postsynth_sim_512B.log`.
+Both cache configurations passed all nine trace tests.
 
-This matters for two reasons. It confirms the block RAM inference described above did not
-change behaviour, and it confirms the arrays are genuinely synthesisable rather than
-simulation-only constructs.
+| Configuration | Trace tests passed | Result |
+|---|---:|---|
+| 1 KB cache | 9/9 | PASS |
+| 512 B cache | 9/9 | PASS |
 
-## 4. Limits of this measurement
+The post-synthesis simulations confirm that:
 
-State these in the report; they are honest limits, not defects.
+- Data checks pass on all nine traces.
+- Hit and miss counts match the RTL simulation.
+- Cycle counts match the RTL simulation.
 
-1. **Device-specific frequency.** 79.85 MHz is for an iCE40 HX8K. A different FPGA or an ASIC
-   library would give a different number from the same RTL. Routing contributes 62% of the
-   critical path here, so a device with better interconnect would be noticeably faster.
-2. **No vendor comparison.** Vivado was not available, so there is no Xilinx utilisation or
-   timing report to compare against. The open-source flow reports the same two quantities the
-   project asks for (utilisation and maximum frequency) on a real device model.
-3. **Statistics counters are included.** The four 32-bit counters (`hits`, `misses`,
-   `mem_reads`, `mem_writes`) are measurement infrastructure, not part of a production cache.
-   They account for 128 of the 383 flip-flops, so a deployed version would be about a third
-   smaller in flip-flops.
-4. **Timing is measured through a harness.** Necessary because of the pin count; the critical
-   path report confirms the reported path is inside the cache, so the figure is meaningful.
-5. **`valid_ram` stays in flip-flops.** It is cleared in one cycle on reset, which block RAM
-   cannot do. For a much larger cache this would become the dominant flip-flop cost and would
-   need a different invalidation scheme, such as a generation counter.
-6. **Single clock domain, no I/O timing.** The CPU and memory interfaces are synchronous to
-   the same clock, so no cross-domain analysis was required.
+The corresponding logs are:
 
-## Files
+- `docs/synthesis/logs/postsynth_sim_1KB.log`
+- `docs/synthesis/logs/postsynth_sim_512B.log`
 
-| File | Contents |
+This provides functional evidence that the synthesised netlists preserve the expected cache behaviour for the tested traces.
+
+---
+
+## 4. Limitations and considerations
+
+The synthesis and timing results should be interpreted with the following limitations.
+
+### 4.1 Device-specific timing
+
+The maximum-frequency results are for the Lattice iCE40 HX8K device.
+
+Routing contributes approximately 62% of the critical-path delay, so the results are dependent on the target FPGA and its routing architecture.
+
+### 4.2 No vendor-tool comparison
+
+Vivado was unavailable in the development environment.
+
+The results therefore use the open-source Yosys and nextpnr toolchain and do not provide a direct comparison against a vendor synthesis flow.
+
+### 4.3 Statistics counters
+
+The statistics counters account for 128 of the 383 mapped flip-flops in the 1 KB configuration.
+
+These counters are included in the reported resource utilisation.
+
+### 4.4 Timing harness
+
+The timing harness is required because the full cache interface has 329 port bits, exceeding the 206 available package I/O pins.
+
+The harness reduces the external interface while retaining the critical path inside the cache.
+
+### 4.5 Valid RAM implementation
+
+The valid RAM remains implemented using flip-flops because of its one-cycle reset behaviour.
+
+A generation-counter approach could be considered for a larger cache to reduce reset-related overhead.
+
+### 4.6 Clock and I/O constraints
+
+The design uses a single clock domain.
+
+The reported timing analysis does not include a complete set of external I/O timing constraints.
+
+---
+
+## 5. Reproducing the synthesis results
+
+Run the synthesis flow from the repository root:
+
+```bash
+bash scripts/run_synth.sh
+```
+
+The script performs:
+
+1. Generic Yosys synthesis.
+2. iCE40 technology mapping.
+3. nextpnr placement and routing.
+4. Resource utilisation extraction.
+5. Maximum-frequency extraction.
+6. Post-synthesis netlist simulation for both configurations.
+7. CSV and log generation.
+
+The machine-readable resource results are written to:
+
+`docs/synthesis/resource_utilization.csv`
+
+Generate the resource comparison chart separately using:
+
+```bash
+python3 scripts/plot_resource_utilization.py
+```
+
+---
+
+## 6. Generated files
+
+| File | Description |
 |---|---|
-| `resource_utilization.csv` | all numbers above, machine-readable (for plotting) |
-| `critical_path_1KB.txt` | annotated critical path, default configuration |
-| `syn_wrap.v` | pin-count harness used for the timing run only |
-| `logs/yosys_generic_*.log` | generic synthesis logs |
-| `logs/yosys_ice40_*.log` | technology-mapped synthesis logs |
-| `logs/nextpnr_*.log` | place-and-route logs, utilisation and frequency |
-| `logs/postsynth_sim_*.log` | gate-level simulation of the netlist on all nine traces |
+| `resource_utilization.csv` | Machine-readable synthesis and resource utilisation results for both configurations |
+
+| `scripts/plot_resource_utilization.py` | Script used to generate the resource comparison chart |
+| `resource_comparison.png` | Resource comparison chart for the 1 KB and 512 B configurations |
+| `resource_table.png` | Screenshot of the resource utilisation table |
+| `device_utilisation.png` | Screenshot of nextpnr device utilisation output |
+| `max_frequency.png` | Maximum-frequency result visualisation |
+| `critical_path.png` | Critical-path visualisation |
+| `critical_path_1KB.txt` | Annotated critical-path report |
+| `syn_wrap.v` | Timing harness used for place-and-route analysis |
+| `logs/yosys_generic_*.log` | Generic Yosys synthesis logs |
+| `logs/yosys_ice40_*.log` | iCE40 technology-mapping logs |
+| `logs/nextpnr_*.log` | Placement, routing and timing logs |
+| `logs/postsynth_sim_*.log` | Post-synthesis simulation logs |
+
+---
+
+## Conclusion
+
+The synthesis results demonstrate that both cache configurations fit comfortably within the resource limits of the Lattice iCE40 HX8K.
+
+The 512 B configuration reduces LUT4 usage from 491 to 412 and placed logic cells from 740 to 662. However, both configurations require four BRAM primitives and achieve approximately 79.9 MHz after routing.
+
+The critical path is dominated by routing delay rather than cache capacity. Both synthesised configurations also pass all nine post-synthesis trace tests.
+
+Overall, the results show that the cache controller is functionally preserved through synthesis and uses a relatively small portion of the target FPGA's available resources.
