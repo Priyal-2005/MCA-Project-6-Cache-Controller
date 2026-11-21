@@ -60,10 +60,15 @@ module tb_write_allocate;
     endtask
 
     initial begin
-        req = 0;
-        we = 0;
-        addr = 0;
-        wdata = 0;
+
+    // Generate waveform for Surfer / WaveTrace
+    $dumpfile("write_allocate.vcd");
+    $dumpvars(0, tb_write_allocate);
+
+    req = 0;
+    we = 0;
+    addr = 0;
+    wdata = 0;
 
         repeat(3) @(negedge clk);
         rst = 0;
