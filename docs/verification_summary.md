@@ -51,4 +51,6 @@ The state sequence REFILL → WRITEMEM → DONE was observed, confirming that th
 
 All assigned Phase II regression tests passed.
 
-Both write modes passed all 8 trace tests, and the deliberate fault-injection test detected 275 errors.
+- Anusha's post-synthesis verification: 9/9 traces passed in both configurations.
+- Both write modes passed all 8 trace tests.
+- Deliberate fault-injection test detected 275 errors.
