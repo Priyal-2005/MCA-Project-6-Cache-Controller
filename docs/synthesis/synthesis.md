@@ -61,7 +61,7 @@ The generic synthesis results show the resources required before mapping the des
 
 The generic synthesis flow does not map the cache arrays into FPGA memory primitives. Instead, the arrays are represented using flip-flops and multiplexing logic.
 
-The generic flip-flop count therefore provides an indication of the storage and state requirements of the design.
+**These generic numbers must not be read as the cost of the design.** The generic flow has no memory primitives, so it implements the cache arrays as individual flip-flops plus multiplexer trees. The flip-flop count is essentially the storage in bits (see 1.2). Quote the iCE40 mapped figures in 1.3 and the placed-and-routed figures in 1.6 for the real cost.
 
 ### 1.2 Cache storage breakdown
 
@@ -314,7 +314,7 @@ The results therefore use the open-source Yosys and nextpnr toolchain and do not
 
 The statistics counters account for 128 of the 383 mapped flip-flops in the 1 KB configuration.
 
-These counters are included in the reported resource utilisation.
+These counters are included in the reported resource utilisation. They are measurement infrastructure, not part of a production cache, so a deployed version would have roughly a third fewer flip-flops (128 of 383).
 
 ### 4.4 Timing harness
 
@@ -371,7 +371,6 @@ python3 scripts/plot_resource_utilization.py
 | File | Description |
 |---|---|
 | `resource_utilization.csv` | Machine-readable synthesis and resource utilisation results for both configurations |
-
 | `scripts/plot_resource_utilization.py` | Script used to generate the resource comparison chart |
 | `resource_comparison.png` | Resource comparison chart for the 1 KB and 512 B configurations |
 | `resource_table.png` | Screenshot of the resource utilisation table |
