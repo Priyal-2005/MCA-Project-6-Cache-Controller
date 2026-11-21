@@ -12,6 +12,7 @@ The following testbenches were executed successfully:
 | tb_lat_sweep (LAT=2) | Cache verification with memory latency 2 | PASS |
 | tb_lat_sweep (LAT=4) | Cache verification with memory latency 4 | PASS |
 | tb_lat_sweep (LAT=8) | Cache verification with memory latency 8 | PASS |
+| tb_traffic | Memory traffic (`mem_reads`, `mem_writes`) per write policy, with a data check against a reference memory | PASS (9 traces x 2 policies, all data checks passed) |
 
 ## 2. Trace-Based Verification
 
@@ -52,5 +53,6 @@ The state sequence REFILL → WRITEMEM → DONE was observed, confirming that th
 All assigned Phase II regression tests passed.
 
 - Anusha's post-synthesis verification: 9/9 traces passed in both configurations.
+- Anusha's write-policy traffic testbench (`tb_traffic`): all 9 traces (the 8 shared traces plus `write_stream`) passed the data check under both write policies.
 - Both write modes passed all 8 trace tests.
 - Deliberate fault-injection test detected 275 errors.
