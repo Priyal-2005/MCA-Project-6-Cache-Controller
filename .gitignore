@@ -4,3 +4,4 @@ sim_trace
 *.vcd
 __pycache__/
 .DS_Store
+sim_*
