@@ -67,8 +67,8 @@ MCA-Project-6-Cache-Controller/
       plots/                hit/miss rate, AMAT, cache size sweep, latency sweep, memory traffic
     (results/ also holds write_policy_traffic.csv and write_policy_traffic.md)
   report/
-    MCA_Project6_Report.pdf IEEE report (Phase I now, final in Phase II)
-    source/                 Word or LaTeX source
+    MCA_Project6_Report.pdf final IEEE report (Phase II)
+    Source/                 LaTeX source, figures, data and build script
 ```
 
 ## How to run

@@ -339,7 +339,7 @@ Hardware verification was performed using a layered methodology across six compr
     \item \textbf{Write-Allocate Testbench (\texttt{tb\_write\_allocate.v})}: Validated refill-before-write sequencing (\texttt{REFILL} $\rightarrow$ \texttt{WRITEMEM} $\rightarrow$ \texttt{DONE}) on write misses, reporting \texttt{ALL WRITE-ALLOCATE TESTS PASSED}.
     \item \textbf{Memory Latency Sweeps (\texttt{tb\_lat\_sweep.v})}: Executed directed tests under $\text{LAT}\in\{2, 4, 8\}$, passing all checks.
     \item \textbf{Write Traffic and Coherence (\texttt{tb\_traffic.v})}: Executed all 9 trace files under both write policies against a reference memory array; all 18 runs reported \texttt{DATA CHECK PASSED}.
-    \item \textbf{Fault-Injection Testing}: To verify testbench observability, the valid-bit check in line 47 of \texttt{rtl/dm_cache.v} was artificially disabled. The testbench immediately flagged the initial post-reset read as invalid and captured 275 cumulative verification errors (Fig.~\ref{fig:fault}) before the condition was restored.
+    \item \textbf{Fault-Injection Testing}: To verify testbench observability, the valid-bit check in line 47 of \texttt{rtl/dm\_cache.v} was artificially disabled. The testbench immediately flagged the initial post-reset read as invalid and captured 275 cumulative verification errors (Fig.~\ref{fig:fault}) before the condition was restored.
     \item \textbf{Gate-Level Netlist Simulation}: Post-synthesis netlists for both 1~KB and 512~B configurations were simulated with Lattice iCE40 cell models, achieving 9/9 trace passes with correct data verified against the reference memory array.
 \end{enumerate}
 
@@ -379,7 +379,7 @@ Kashika & Verification Lead & \texttt{tb\_dm\_cache.v}, \texttt{tb\_write\_alloc
 Vaishnavi & Traces \& Plots Lead & \texttt{traces/*.trace}, \texttt{scripts/trace\_gen.py}, \\
 & & Plot generation scripts (\texttt{plot\_*.py}), \texttt{docs/results/plots/} \\
 Sarthak & Report \& Demo Lead & IEEE technical report (\texttt{report/Source/}), PDF generation, \\
-& & \texttt{viva_prep.md}, results integration, demo preparation \\
+& & \texttt{viva\_prep.md}, results integration, demo preparation \\
 \bottomrule
 \end{tabular}
 \end{table}

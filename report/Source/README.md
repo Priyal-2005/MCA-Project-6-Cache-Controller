@@ -26,24 +26,15 @@ This directory contains the complete source code, datasets, figures, and build s
   - `lat_2_4_8_sweep.csv`: Parameter sweep results across LAT in {2, 4, 8} (Table III).
   - `write_policy_traffic.csv`: Memory bus traffic words across write policies (Table IV).
   - `resource_utilization.csv`: Multi-stage FPGA synthesis and timing metrics (Table V).
-- **`build.py`**: Standalone Python compilation script that compiles the publication-ready PDF using headless Chrome and CSS paged media.
+- **`IEEEtran.cls`**: IEEE conference document class used by the `.tex` file.
 
 ---
 
 ### How to Compile the Report
 
-#### Option A: Using the Automated Build Script (Recommended)
-From within this `Source/` directory or repository root:
+The PDF `../MCA_Project6_Report.pdf` is built from `MCA_Project6_Report.tex` with LaTeX. From this `Source/` directory:
 ```bash
-python3 build.py
+latexmk -pdf MCA_Project6_Report.tex
+cp MCA_Project6_Report.pdf ..
 ```
-This compiles `../MCA_Project6_Report.pdf` strictly matching the 6-page IEEE conference layout.
-
-#### Option B: Standard LaTeX / BibTeX Compilation
-If `pdflatex` or `latexmk` is installed in your local environment:
-```bash
-pdflatex MCA_Project6_Report.tex
-bibtex MCA_Project6_Report
-pdflatex MCA_Project6_Report.tex
-pdflatex MCA_Project6_Report.tex
-```
+(or run `pdflatex MCA_Project6_Report.tex` twice). The reference list is written inside the `.tex` file, so BibTeX is not needed. If you change a number in the report, change it in the `.tex` and rebuild; do not edit the PDF directly.
