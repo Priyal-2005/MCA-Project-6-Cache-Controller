@@ -1,0 +1,3 @@
+config,cache_bytes,index_bits,lines,tag_bits,generic_cells,generic_ffs,ice40_lut4,ice40_carry,ice40_ffs,ice40_bram,pnr_logic_cells,pnr_logic_pct,pnr_bram,pnr_bram_pct,fmax_mhz
+1KB,1024,6,64,22,30922,9935,491,155,383,4,740,9,4,12,79.85
+512B,512,5,32,23,15652,5134,412,154,352,4,662,8,4,12,79.90

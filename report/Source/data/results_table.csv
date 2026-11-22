@@ -1,0 +1,9 @@
+trace,accesses,hits,misses,hit_rate_pct,miss_rate_pct,avg_cycles_per_access(AMAT),data_check
+sequential,512,384,128,75.0,25.0,8.0,True
+random,2000,479,1521,23.9,76.0,18.21,True
+repeated,800,796,4,99.5,0.5,3.1,True
+stride16,1000,0,1000,0.0,100.0,23.0,True
+stride1024,1000,0,1000,0.0,100.0,23.0,True
+matrix_rowmajor,1024,768,256,75.0,25.0,8.0,True
+matrix_colmajor,1024,0,1024,0.0,100.0,23.0,True
+writes,38,27,11,71.1,28.9,8.53,True

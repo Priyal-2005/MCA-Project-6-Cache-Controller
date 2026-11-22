@@ -1,0 +1,6 @@
+trace,cache_LAT4,cache_LAT10,cache_LAT20,cache_LAT50,cache_LAT100,nocache_LAT4,nocache_LAT10,nocache_LAT20,nocache_LAT50,nocache_LAT100
+sequential,8.0,14.0,24.0,54.0,104.0,4,10,20,50,100
+random,18.21,36.46,66.88,158.14,310.24,4,10,20,50,100
+repeated,3.1,3.22,3.42,4.02,5.02,4,10,20,50,100
+matrix_rowmajor,8.0,14.0,24.0,54.0,104.0,4,10,20,50,100
+matrix_colmajor,23.0,47.0,87.0,207.0,407.0,4,10,20,50,100
